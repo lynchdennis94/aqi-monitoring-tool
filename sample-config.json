@@ -1,0 +1,11 @@
+{
+  "api-key": "",
+  "sleep-timer": 10,
+  "emails-for-notifications": ["notifyuserone@example.com", "notifyusertwo@email.com"],
+  "AQI-threshold": 100,
+  "send-email-notifications" : false,
+  "smtp-server": "smtp.example.com",
+  "smtp-port": 25,
+  "smtp-username": "sender@example.com",
+  "smtp-password": "MyPassword123"
+}

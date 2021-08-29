@@ -8,7 +8,6 @@ from email.message import EmailMessage
 
 api_key_config_key = 'api-key'
 sleep_timer_config_key = 'sleep-timer'
-test_email_config_key = 'test-email'
 target_emails_config_key = 'emails-for-notifications'
 aqi_threshold_config_key = 'AQI-threshold'
 send_emails_config_key = 'send-email-notifications'
