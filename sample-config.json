@@ -7,5 +7,11 @@
   "smtp-server": "smtp.example.com",
   "smtp-port": 25,
   "smtp-username": "sender@example.com",
-  "smtp-password": "MyPassword123"
+  "smtp-password": "MyPassword123",
+  "purpleair-read-key": "ABC-123",
+  "purpleair-write-key": "ABD-123",
+  "purpleair-nwlat": "0.100000",
+  "purpleair-nwlng": "-0.10000",
+  "purpleair-selat": "0.000000",
+  "purpleair-selng": "0.000000"
 }

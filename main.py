@@ -1,9 +1,10 @@
 import ssl
 
-import requests
+import utilities
+import purpleairhook
 import time
-import json
 import smtplib
+import json
 from email.message import EmailMessage
 
 api_key_config_key = 'api-key'
@@ -17,23 +18,8 @@ smtp_username_config_key = 'smtp-username'
 smtp_password_config_key = 'smtp-password'
 
 
-def load_config_data():
-    with open('config.json', 'r') as config_file:
-        json_data = config_file.read()
-
-    return json.loads(json_data)
-
-
-def get_purpleair_data(api_key):
-    return 0
-
-
-def calculate_aqi(data):
-    return 0
-
-
-def send_email(send_real_emails, crossing_above_threshold, server, port, username, password, current_aqi,
-               threshold_aqi, target_emails=None):
+def send_email(crossing_above_threshold, server, port, username, password, current_aqi,
+               threshold_aqi, target_email):
     server = smtplib.SMTP(server, port)
     server.ehlo()
     server.starttls(context=ssl.create_default_context())
@@ -58,22 +44,13 @@ def send_email(send_real_emails, crossing_above_threshold, server, port, usernam
                    "You can open the windows back up!"
             msg.set_content(body)
 
-        # Determine recipients and send off email(s)
-        if send_real_emails:
-            for target_email in target_emails:
-                try:
-                    print(f"Sending email to {target_email}")
-                    msg['To'] = target_email
-                    server.sendmail(username, target_email, msg.as_string())
-                except smtplib.SMTPException:
-                    print("Couldn't send email")
-        else:
-            try:
-                print(f"Sending email to {username}")
-                msg['To'] = username
-                server.sendmail(username, username, msg.as_string())
-            except smtplib.SMTPException:
-                print("Couldn't send email")
+        # Send off email
+        try:
+            print(f"Sending email to {target_email}")
+            msg['To'] = target_email
+            server.sendmail(username, target_email, msg.as_string())
+        except smtplib.SMTPException:
+            print("Couldn't send email")
 
     finally:
         server.quit()
@@ -81,44 +58,56 @@ def send_email(send_real_emails, crossing_above_threshold, server, port, usernam
 
 def main():
     currently_above_threshold = False
+    print("Running")
     while True:
         # Load necessary config information for this iteration
-        config_dict = load_config_data()
+        config_dict = utilities.load_config_data()
+        purple_air_hook = purpleairhook.PurpleAirHook()
 
         # Get the information from purple air
-        purple_air_data = get_purpleair_data(config_dict[api_key_config_key])
+        response = purple_air_hook.get_bounded_sensors_data()
+        json_response = json.loads(response.text)
+        response_data = json_response["data"]
+        aqi_values = []
 
         # Calculate the AQI and compare to threshold
-        aqi = calculate_aqi(purple_air_data)
+        for item in response_data:
+            aqi = purpleairhook.get_aqi_value('pm2.5', item[2])
+            aqi_values.append(aqi)
+
+        aqi_values.sort()
+        filter_values = aqi_values[1:-1]
+        averaged_aqi = sum(filter_values) / len(filter_values)
+        rounded_aqi = round(averaged_aqi)
         threshold = config_dict[aqi_threshold_config_key]
 
-        if aqi > threshold and not currently_above_threshold:
+        should_send_email = False
+        config_dict[send_emails_config_key]
+        if rounded_aqi >= threshold and not currently_above_threshold:
             # We've crossed above the threshold - send an email
-            send_email(config_dict[send_emails_config_key],
-                       True,
-                       config_dict[smtp_server_config_key],
-                       config_dict[smtp_port_config_key],
-                       config_dict[smtp_username_config_key],
-                       config_dict[smtp_password_config_key],
-                       aqi,
-                       threshold,
-                       config_dict[target_emails_config_key])
+            should_send_email = True
             currently_above_threshold = True
-        elif aqi < threshold and currently_above_threshold:
+        elif rounded_aqi < threshold and currently_above_threshold:
             # We've dipped below the threshold - send an email
-            send_email(config_dict[send_emails_config_key],
-                       False,
-                       config_dict[smtp_server_config_key],
-                       config_dict[smtp_port_config_key],
-                       config_dict[smtp_username_config_key],
-                       config_dict[smtp_password_config_key],
-                       aqi,
-                       threshold,
-                       config_dict[target_emails_config_key])
+            should_send_email = True
             currently_above_threshold = False
 
+        if should_send_email:
+            if config_dict[send_emails_config_key]:
+                target_emails = config_dict[target_emails_config_key]
+            else:
+                target_emails = [config_dict[smtp_username_config_key]]
+            for email in target_emails:
+                send_email(currently_above_threshold,
+                           config_dict[smtp_server_config_key],
+                           config_dict[smtp_port_config_key],
+                           config_dict[smtp_username_config_key],
+                           config_dict[smtp_password_config_key],
+                           rounded_aqi,
+                           threshold,
+                           email)
+
         # Sleep until next iteration
-        print(config_dict)
         time.sleep(config_dict[sleep_timer_config_key])
 
 
