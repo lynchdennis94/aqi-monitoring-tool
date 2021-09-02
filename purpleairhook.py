@@ -85,6 +85,7 @@ class PurpleAirHook:
     ''' https://api.purpleair.com/v1/sensors '''
     def get_bounded_sensors_data(self):
         request_payload = {'fields': 'name,pm2.5',
+                           'location_type': 0,
                            'nwlng': self.config_dict[purpleair_nwlng_config_key],
                            'nwlat': self.config_dict[purpleair_nwlat_config_key],
                            'selng': self.config_dict[purpleair_selng_config_key],
@@ -111,4 +112,3 @@ if __name__ == '__main__':
     print(filter_values)
     averaged_aqi = sum(filter_values)/len(filter_values)
     print(averaged_aqi)
-
